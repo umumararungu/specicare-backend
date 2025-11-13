@@ -108,7 +108,7 @@ async function createTables(client) {
                 'pathology', 'endoscopy', 'pulmonology', 'other'
             )),
             subcategory VARCHAR(100),
-            hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+            hospital_id uuid NOT NULL REFERENCES hospitals(id),
             price INTEGER NOT NULL CHECK (price >= 0),
             currency VARCHAR(10) DEFAULT 'RWF',
             duration VARCHAR(50) NOT NULL,
@@ -130,9 +130,9 @@ async function createTables(client) {
         CREATE TABLE IF NOT EXISTS appointments (
             id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             reference VARCHAR(50) UNIQUE NOT NULL,
-            patient_id INTEGER REFERENCES users(id),
-            test_id INTEGER NOT NULL REFERENCES medical_tests(id),
-            hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+            patient_id uuid REFERENCES users(id),
+            test_id uuid NOT NULL REFERENCES medical_tests(id),
+            hospital_id uuid NOT NULL REFERENCES hospitals(id),
             appointment_date DATE NOT NULL,
             time_slot VARCHAR(10) NOT NULL,
             status VARCHAR(20) DEFAULT 'pending' CHECK (status IN (
@@ -150,10 +150,10 @@ async function createTables(client) {
     await client.query(`
     CREATE TABLE IF NOT EXISTS test_results (
         id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
-        appointment_id INTEGER NOT NULL REFERENCES appointments(id),
-        test_id INTEGER NOT NULL REFERENCES medical_tests(id),
-        patient_id INTEGER NOT NULL REFERENCES users(id),
-        hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+        appointment_id uuid NOT NULL REFERENCES appointments(id),
+        test_id uuid NOT NULL REFERENCES medical_tests(id),
+        patient_id uuid NOT NULL REFERENCES users(id),
+        hospital_id uuid NOT NULL REFERENCES hospitals(id),
         numeric_value VARCHAR(255),
         text_results TEXT,
         priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('normal', 'urgent')),
@@ -168,7 +168,7 @@ async function createTables(client) {
     await client.query(`
         CREATE TABLE IF NOT EXISTS notifications (
             id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
-            patient_id INTEGER NOT NULL REFERENCES users(id),
+            patient_id uuid NOT NULL REFERENCES users(id),
             type VARCHAR(50) NOT NULL,
             title VARCHAR(255) NOT NULL,
             message TEXT NOT NULL,
