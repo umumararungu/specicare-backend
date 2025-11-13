@@ -1,10 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Appointment = sequelize.define('Appointment', {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
+id: {
+  type: DataTypes.UUID,
+  defaultValue: DataTypes.UUIDV4,
+  primaryKey: true,
+},
     patient_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -39,8 +39,6 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: true,
       },
     },
-    // Note: Do NOT declare created_at/updated_at here when using Sequelize timestamps.
-    // Let Sequelize manage them (with underscored: true they map to created_at/updated_at).
   }, {
     tableName: 'appointments',
     timestamps: true,

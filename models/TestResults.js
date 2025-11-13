@@ -3,31 +3,27 @@ const sequelize = require('../config/database');
 const User = require('./User');
 module.exports = (sequelize, DataTypes) =>{
 return TestResult = sequelize.define('testResult', {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-  appointmentId: {
+id: {
+  type: DataTypes.UUID,
+  defaultValue: DataTypes.UUIDV4,
+  primaryKey: true,
+},
+  appointment_id: {
     type: DataTypes.UUID,
     allowNull: false,
   },
-  testId:{
+  test_id:{
       type:DataTypes.UUID,
       allowNull:false,
   },
-  patientId: {
+  patient_id: {
     type: DataTypes.UUID,
     allowNull: false,
   },
-  hospitalId: {
+  hospital_id: {
     type: DataTypes.UUID,
     allowNull: false,
   },
-  // result_type: {
-  //   type: DataTypes.ENUM('numeric', 'text', 'image', 'file', 'mixed'),
-  //   allowNull: false,
-  // },
   files: {
     type: DataTypes.JSONB, // [{ filename, url, uploadedBy, ... }]
     defaultValue: [],

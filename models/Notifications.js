@@ -4,8 +4,8 @@ const User = require('./User');
 module.exports = (sequelize, DataTypes) => {
   return Notification = sequelize.define('Notification', {
     // Keep attribute name `patientId` in JS but map to DB column `patient_id`
-    patientId: {
-      type: DataTypes.INTEGER,
+    patient_id: {
+      type: DataTypes.UUID,
       allowNull: false,
       field: 'patient_id',
     },

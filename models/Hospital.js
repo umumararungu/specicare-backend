@@ -5,12 +5,11 @@ const sequelize = require('../config/database');
 
 module.exports = (sequelize, DataTypes) =>{
 return Hospital = sequelize.define('hospital', {
-  id: {
-    type: DataTypes.INTEGER,
-    // defaultValue: DataTypes.UUIDV4,
-    autoIncrement: true,
-    primaryKey: true,
-  },
+id: {
+  type: DataTypes.UUID,
+  defaultValue: DataTypes.UUIDV4,
+  primaryKey: true,
+},
   name: {
     type: DataTypes.STRING(150),
     allowNull: false,
