@@ -28,13 +28,29 @@ console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'NOT SET');
 // Allow using a single DATABASE_URL in production (e.g. Railway). If provided, prefer it.
 const usingDatabaseUrl = !!process.env.DATABASE_URL;
 
+// Ensure dbConfig is always defined and exported (even when using DATABASE_URL)
+let dbConfig;
+
+// Helper: pick the first non-empty env var from a list
+const pickEnv = (...names) => {
+  for (const n of names) {
+    const v = process.env[n];
+    if (v !== undefined && v !== null && v.toString().trim() !== '') return v;
+  }
+  return undefined;
+};
+
 if (!usingDatabaseUrl) {
-  // Validate required environment variables when DATABASE_URL is not present
-  const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_HOST'];
-  const missingEnvVars = requiredEnvVars.filter(envVar => {
-    const value = process.env[envVar];
-    return !value || value.toString().trim() === '';
-  });
+  // Resolve env vars with fallbacks common on Railway: PG* and POSTGRES_*
+  const resolved = {
+    DB_NAME: pickEnv('DB_NAME', 'PGDATABASE', 'POSTGRES_DB'),
+    DB_USER: pickEnv('DB_USER', 'PGUSER', 'POSTGRES_USER'),
+    DB_PASSWORD: pickEnv('DB_PASSWORD', 'PGPASSWORD', 'POSTGRES_PASSWORD'),
+    DB_HOST: pickEnv('DB_HOST', 'PGHOST'),
+    DB_PORT: pickEnv('DB_PORT', 'PGPORT')
+  };
+
+  const missingEnvVars = Object.entries(resolved).filter(([k, v]) => !v).map(([k]) => k);
 
   if (missingEnvVars.length > 0) {
     const msg = `Missing or empty environment variables: ${missingEnvVars.join(', ')}. Please set them or provide DATABASE_URL.`;
@@ -46,14 +62,35 @@ if (!usingDatabaseUrl) {
       console.warn(msg);
     }
   }
+
+  // Attach resolved values back to process.env for compatibility with other code that may read DB_* vars
+  if (resolved.DB_NAME) process.env.DB_NAME = resolved.DB_NAME;
+  if (resolved.DB_USER) process.env.DB_USER = resolved.DB_USER;
+  if (resolved.DB_PASSWORD) process.env.DB_PASSWORD = resolved.DB_PASSWORD;
+  if (resolved.DB_HOST) process.env.DB_HOST = resolved.DB_HOST;
+  if (resolved.DB_PORT) process.env.DB_PORT = resolved.DB_PORT;
 }
 
 // Database configuration
 let sequelize;
 if (usingDatabaseUrl) {
-  console.log('\n Using DATABASE_URL for connection');
+  console.log('\n Using DATABASE_URL for connection (Railway or similar)');
   console.log(' DATABASE_URL:', process.env.DATABASE_URL ? '***' : 'NOT SET');
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
+
+  // When connecting via a URL (Railway), ensure SSL is enabled and allow self-signed certs
+  // (many hosted Postgres providers require SSL but use certificates that are not verified).
+  const dialectOptions = {
+    ssl: {
+      require: true,
+      // For some platforms like Railway/Heroku, you must set rejectUnauthorized=false
+      // so Node/pg accepts the platform's certificate.
+      rejectUnauthorized: false
+    }
+  };
+
+  dbConfig = {
+    useDatabaseUrl: true,
+    connectionString: process.env.DATABASE_URL,
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
@@ -62,12 +99,17 @@ if (usingDatabaseUrl) {
       acquire: 30000,
       idle: 10000
     },
-    dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production'
-    }
+    dialectOptions
+  };
+
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    logging: dbConfig.logging,
+    pool: dbConfig.pool,
+    dialectOptions: dbConfig.dialectOptions
   });
 } else {
-  const dbConfig = {
+  dbConfig = {
     database: process.env.DB_NAME,
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD || null,
@@ -81,9 +123,10 @@ if (usingDatabaseUrl) {
       acquire: 30000,
       idle: 10000
     },
-    dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production'
-    }
+    // Allow opt-in SSL in non-URL mode (set DB_SSL=true in env to force SSL)
+    dialectOptions: process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production'
+      ? { ssl: { require: true, rejectUnauthorized: false } }
+      : undefined
   };
 
   console.log('\n  Database Configuration:');
