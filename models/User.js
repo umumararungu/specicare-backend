@@ -101,5 +101,5 @@ id: {
     return user;
   };
 
-  return User; // Return at the end, after defining all methods
+  return User;
 };
