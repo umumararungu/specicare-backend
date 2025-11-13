@@ -45,7 +45,7 @@ async function createTables(client) {
     // Users table
     await client.query(`
         CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
+            id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             email VARCHAR(100) NOT NULL,
             phone VARCHAR(15) NOT NULL,
@@ -68,7 +68,7 @@ async function createTables(client) {
         // Hospitals table
     await client.query(`
         CREATE TABLE IF NOT EXISTS hospitals (
-            id SERIAL PRIMARY KEY,
+            id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             name VARCHAR(200) NOT NULL,
             type VARCHAR(50) NOT NULL CHECK (type IN (
                 'national_referral', 'provincial', 'district', 
@@ -100,7 +100,7 @@ async function createTables(client) {
     // Medical tests table
     await client.query(`
         CREATE TABLE IF NOT EXISTS medical_tests (
-            id SERIAL PRIMARY KEY,
+            id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             name VARCHAR(200) NOT NULL,
             description TEXT NOT NULL,
             category VARCHAR(50) NOT NULL CHECK (category IN (
@@ -128,7 +128,7 @@ async function createTables(client) {
     // Appointments table
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
-            id SERIAL PRIMARY KEY,
+            id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             reference VARCHAR(50) UNIQUE NOT NULL,
             patient_id INTEGER REFERENCES users(id),
             test_id INTEGER NOT NULL REFERENCES medical_tests(id),
@@ -149,7 +149,7 @@ async function createTables(client) {
     // Test results table
     await client.query(`
     CREATE TABLE IF NOT EXISTS test_results (
-        id SERIAL PRIMARY KEY,
+        id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
         appointment_id INTEGER NOT NULL REFERENCES appointments(id),
         test_id INTEGER NOT NULL REFERENCES medical_tests(id),
         patient_id INTEGER NOT NULL REFERENCES users(id),
@@ -167,7 +167,7 @@ async function createTables(client) {
     // Notifications table
     await client.query(`
         CREATE TABLE IF NOT EXISTS notifications (
-            id SERIAL PRIMARY KEY,
+            id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
             patient_id INTEGER NOT NULL REFERENCES users(id),
             type VARCHAR(50) NOT NULL,
             title VARCHAR(255) NOT NULL,
