@@ -23,10 +23,6 @@ const PORT = process.env.PORT || 5000;
 
 // Security middleware
 app.use(securityHeaders);
-// app.use(cors({
-//     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-//     credentials: true
-// }));
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
@@ -48,8 +44,8 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true, // Important: allow cookies
-    //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    //   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
   })
 );
 
