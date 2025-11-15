@@ -26,6 +26,20 @@ router.post("/register", async (req, res) => {
       role = "patient",
     } = req.body;
 
+    // Basic input validation - prevent DB-level errors and give clear feedback
+    const missing = [];
+    if (!name || !name.toString().trim()) missing.push('name');
+    if (!email || !email.toString().trim()) missing.push('email');
+    if (!password || !password.toString().trim()) missing.push('password');
+    if (!phone || !phone.toString().trim()) missing.push('phone');
+
+    if (missing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required fields: ${missing.join(', ')}`,
+      });
+    }
+
 
     // Create new user
     const user = await User.create({
@@ -78,7 +92,8 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    // Log full error to help debugging (stack when available)
+    console.error("Registration error:", error && error.stack ? error.stack : error);
     res.status(500).json({
       success: false,
       message: "Error creating user account",
