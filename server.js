@@ -42,7 +42,10 @@ app.get("/api/health", (req, res) => res.send("Server is running"));
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      "https://specicare-frontend-production.up.railway.app",
+      "http://localhost:3000"
+    ],
     credentials: true, // Important: allow cookies
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
