@@ -42,6 +42,8 @@ async function initializeDatabase() {
 }
 
 async function createTables(client) {
+    // Ensure uuid extension exists (used for uuid_generate_v4)
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
     // Users table
     await client.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -64,6 +66,26 @@ async function createTables(client) {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Add unique indexes to enforce uniqueness at the database level
+    // This protects against duplicate emails/phones even if Sequelize model isn't synced
+    // Check for duplicates first; creating a unique index will fail if duplicates exist.
+    const dupEmails = await client.query(`SELECT email, COUNT(*) FROM users GROUP BY email HAVING COUNT(*) > 1`);
+    const dupPhones = await client.query(`SELECT phone, COUNT(*) FROM users GROUP BY phone HAVING COUNT(*) > 1`);
+
+    if (dupEmails.rows.length > 0) {
+        console.warn('Found duplicate emails in users table; please resolve these before creating unique index:');
+        console.warn(dupEmails.rows.slice(0,10));
+    } else {
+        await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (email);`);
+    }
+
+    if (dupPhones.rows.length > 0) {
+        console.warn('Found duplicate phones in users table; please resolve these before creating unique index:');
+        console.warn(dupPhones.rows.slice(0,10));
+    } else {
+        await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_phone_unique_idx ON users (phone);`);
+    }
 
         // Hospitals table
     await client.query(`

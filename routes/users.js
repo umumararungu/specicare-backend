@@ -3,6 +3,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { User } = require("../models");
+const { Op } = require('sequelize');
 const router = express.Router();
 
 const crypto = require('crypto');
@@ -37,6 +38,24 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Missing required fields: ${missing.join(', ')}`,
+      });
+    }
+
+    // Prevent duplicate accounts at the application level (quick-fail).
+    // Note: DB-level unique constraints are the source of truth and must be present.
+    const existing = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: email.toLowerCase() },
+          { phone }
+        ]
+      }
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'A user with that email or phone already exists',
       });
     }
 
