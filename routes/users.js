@@ -308,4 +308,20 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// Root info for the users route - helpful when someone GETs /api/users
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Users API - available endpoints',
+    endpoints: {
+      register: 'POST /api/users/register',
+      login: 'POST /api/users/login',
+      logout: 'POST /api/users/logout',
+      forgotPassword: 'POST /api/users/forgot-password',
+      resetPassword: 'POST /api/users/reset-password',
+      me: 'GET /api/users/me (requires auth cookie)'
+    }
+  });
+});
+
 module.exports = router;
