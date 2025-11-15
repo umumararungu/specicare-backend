@@ -40,17 +40,24 @@ app.use("/api/", apiLimiter);
 app.get("/api/health", (req, res) => res.send("Server is running"));
 
 // CORS configuration
-app.use(
-  cors({
-    origin: [
-      "https://specicare-frontend-production.up.railway.app",
-      "http://localhost:3000"
-    ],
-    credentials: true, // Important: allow cookies
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-  })
-);
+// Allowed frontend origins
+const allowedOrigins = [
+  "https://specicare-frontend-production.up.railway.app",
+  "http://localhost:3000"
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman / mobile apps
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error("CORS policy does not allow this origin"), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, // important to allow cookies
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','Cookie']
+}));
 
 app.options("*", cors);
 
