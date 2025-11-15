@@ -41,23 +41,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Prevent duplicate accounts at the application level (quick-fail).
-    // Note: DB-level unique constraints are the source of truth and must be present.
-    const existing = await User.findOne({
-      where: {
-        [Op.or]: [
-          { email: email.toLowerCase() },
-          { phone }
-        ]
-      }
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: 'A user with that email or phone already exists',
-      });
-    }
+      // Note: duplicates for email/phone are allowed by design in this configuration.
 
 
     // Create new user

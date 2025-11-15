@@ -15,7 +15,6 @@ id: {
     email: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
       validate: {
         isEmail: true,
       },
@@ -23,7 +22,6 @@ id: {
     phone: {
       type: DataTypes.STRING(15),
       allowNull: false,
-      unique: true,
     },
     password: {
       type: DataTypes.STRING,
