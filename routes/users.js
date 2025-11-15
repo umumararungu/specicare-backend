@@ -69,6 +69,9 @@ router.post("/register", async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      // For cross-site cookies (frontend and backend on different origins) browsers
+      // require SameSite=None and Secure. In development we keep lax for convenience.
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -94,6 +97,25 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     // Log full error to help debugging (stack when available)
     console.error("Registration error:", error && error.stack ? error.stack : error);
+
+    // Map common Sequelize errors to clear HTTP responses
+    if (error && error.name === 'SequelizeUniqueConstraintError') {
+      // Unique constraint (email or phone already exists)
+      return res.status(409).json({
+        success: false,
+        message: 'A user with that email or phone already exists',
+        errors: error.errors ? error.errors.map(e => e.message) : undefined,
+      });
+    }
+
+    if (error && error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: error.errors ? error.errors.map(e => e.message) : undefined,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Error creating user account",
@@ -157,7 +179,7 @@ router.post("/login", async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
