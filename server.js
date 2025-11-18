@@ -35,8 +35,8 @@ const allowedOrigins = rawOrigins
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3001",
+    "https://specicare-frontend-production.up.railway.app",
   ])
-  // remove duplicates
   .filter((v, i, a) => a.indexOf(v) === i);
 
 console.log("CORS allowed origins:", allowedOrigins);
