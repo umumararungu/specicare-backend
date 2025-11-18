@@ -14,6 +14,7 @@ const authenticate = async (req, res, next) => {
     }
 
     if (!token) {
+      console.warn('Auth: no token provided (no Authorization header and no cookie)');
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please login.',
@@ -45,6 +46,7 @@ const authenticate = async (req, res, next) => {
     console.error('Auth middleware error:', error && error.stack ? error.stack : error);
 
     if (error.name === 'JsonWebTokenError') {
+      console.warn('Auth: invalid token -', error.message);
       return res.status(401).json({
         success: false,
         message: 'Invalid token',
@@ -52,6 +54,7 @@ const authenticate = async (req, res, next) => {
     }
 
     if (error.name === 'TokenExpiredError') {
+      console.warn('Auth: token expired');
       return res.status(401).json({
         success: false,
         message: 'Token expired. Please login again.',

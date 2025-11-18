@@ -71,10 +71,15 @@ router.post("/register", async (req, res) => {
     );
 
     // Return token in JSON (client should store it, e.g. localStorage)
+    // Also include token expiry info to help debugging on the client.
+    const decoded = jwt.decode(token) || {};
+    const expiresAt = decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null;
+
     res.status(201).json({
       success: true,
       message: "User registered successfully",
       token,
+      expiresAt,
       user: {
         id: user.id,
         name: user.name,
@@ -141,10 +146,14 @@ router.post("/login", async (req, res) => {
     );
 
     // Return token in JSON (client should store it, e.g. localStorage)
+    const decoded = jwt.decode(token) || {};
+    const expiresAt = decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null;
+
     res.json({
       success: true,
       message: "Login successful",
       token,
+      expiresAt,
       user: {
         id: user.id,
         name: user.name,
