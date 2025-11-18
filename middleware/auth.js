@@ -19,7 +19,11 @@ const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-      res.clearCookie('token');
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      });
       return res.status(401).json({ 
         success: false,
         message: 'User not found' 
@@ -38,8 +42,12 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     console.error('Auth middleware error:', error);
     
-    // Clear invalid token
-    res.clearCookie('token');
+    // Clear invalid token (use same attributes as when it was set)
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
     
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ 

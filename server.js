@@ -24,21 +24,30 @@ const PORT = process.env.PORT || 5000;
    1. CORS — MUST BE THE FIRST MIDDLEWARE
 -------------------------------------------- */
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://127.0.0.1:3001",
-];
+// Build allowed origins from env or sensible defaults. Support comma-separated
+// FRONTEND_ORIGINS for flexibility in deployment (e.g. Railway).
+const rawOrigins = process.env.FRONTEND_ORIGINS || process.env.FRONTEND_URL || "";
+const allowedOrigins = rawOrigins
+  .split(",")
+  .map((s) => s && s.trim())
+  .filter(Boolean)
+  .concat([
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+  ])
+  // remove duplicates
+  .filter((v, i, a) => a.indexOf(v) === i);
+
+console.log("CORS allowed origins:", allowedOrigins);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Allow mobile / Postman / health checks
+      // Allow non-browser requests (curl, Postman) which have no Origin
+      if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
       return callback(new Error(`Blocked by CORS: ${origin}`), false);
     },

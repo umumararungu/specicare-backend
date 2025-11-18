@@ -9,6 +9,14 @@ const router = express.Router();
 const crypto = require('crypto');
 const { sendPasswordReset } = require('../services/email');
 
+// Standard cookie options used for setting and clearing the auth cookie.
+const cookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+
 // Register new user
 router.post("/register", async (req, res) => {
   try {
@@ -69,14 +77,7 @@ router.post("/register", async (req, res) => {
     );
 
     // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      // For cross-site cookies (frontend and backend on different origins) browsers
-      // require SameSite=None and Secure. In development we keep lax for convenience.
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie("token", token, cookieOptions());
 
     res.status(201).json({
       success: true,
@@ -148,12 +149,7 @@ router.post("/login", async (req, res) => {
     );
 
     // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true in prod
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie("token", token, cookieOptions());
 
     res.json({
       success: true,
@@ -175,7 +171,7 @@ router.post("/login", async (req, res) => {
 
 // Logout user
 router.post("/logout", (req, res) => {
-  res.clearCookie("token");
+  res.clearCookie("token", cookieOptions());
   res.json({
     success: true,
     message: "Logout successful",
@@ -251,14 +247,14 @@ router.get("/me", async (req, res) => {
     const user = await User.findByPk(decoded.userId, { attributes: { exclude: ["password"] } });
 
     if (!user || !user.is_active) {
-      res.clearCookie("token");
+      res.clearCookie("token", cookieOptions());
       return res.status(401).json({ success: false, message: "User not found or deactivated" });
     }
 
     res.json({ success: true, user });
   } catch (error) {
     console.error("Get user error:", error);
-    res.clearCookie("token");
+    res.clearCookie("token", cookieOptions());
     res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 });
