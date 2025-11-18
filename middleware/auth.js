@@ -4,22 +4,13 @@ const { User } = require('../models');
 
 const authenticate = async (req, res, next) => {
   try {
-    // Prefer Bearer token from Authorization header, fallback to cookie if present
-    let token = null;
+    // Require Bearer token in Authorization header
     const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
-      token = authHeader.split(' ')[1];
-    } else if (req.cookies && req.cookies.token) {
-      token = req.cookies.token; // fallback for older clients
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authentication required. Please login.' });
     }
 
-    if (!token) {
-      console.warn('Auth: no token provided (no Authorization header and no cookie)');
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required. Please login.',
-      });
-    }
+    const token = authHeader.split(' ')[1];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findByPk(decoded.userId, {

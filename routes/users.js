@@ -6,10 +6,10 @@ const { User } = require("../models");
 const { Op } = require('sequelize');
 const router = express.Router();
 
-const crypto = require('crypto');
 const { sendPasswordReset } = require('../services/email');
 
 const { authenticate } = require('../middleware/auth');
+ 
 
 // Register new user
 router.post("/register", async (req, res) => {
@@ -63,21 +63,19 @@ router.post("/register", async (req, res) => {
       is_active: true,
     });
 
-    // Generate JWT token
+    // Issue access token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // Return token in JSON (client should store it, e.g. localStorage)
-    // Also include token expiry info to help debugging on the client.
     const decoded = jwt.decode(token) || {};
     const expiresAt = decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null;
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
+      message: 'User registered successfully',
       token,
       expiresAt,
       user: {
@@ -139,19 +137,20 @@ router.post("/login", async (req, res) => {
 
     await user.update({ last_login: new Date() });
 
+    // Issue access token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // Return token in JSON (client should store it, e.g. localStorage)
     const decoded = jwt.decode(token) || {};
     const expiresAt = decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null;
 
+    // Return access token in JSON (client should store it and send in Authorization header)
     res.json({
       success: true,
-      message: "Login successful",
+      message: 'Login successful',
       token,
       expiresAt,
       user: {
@@ -170,9 +169,9 @@ router.post("/login", async (req, res) => {
 
 
 // Logout user
-router.post("/logout", (req, res) => {
-  // With token-in-JSON approach, logout is handled client-side by removing the token.
-  res.json({ success: true, message: "Logout successful" });
+// Logout: simple stateless logout (client removes stored token)
+router.post('/logout', (req, res) => {
+  return res.json({ success: true, message: 'Logout successful' });
 });
 
 // Request password reset
@@ -252,7 +251,7 @@ router.get('/', (req, res) => {
       logout: 'POST /api/users/logout',
       forgotPassword: 'POST /api/users/forgot-password',
       resetPassword: 'POST /api/users/reset-password',
-      me: 'GET /api/users/me (requires auth cookie)'
+      me: 'GET /api/users/me (requires Authorization: Bearer <token>)'
     }
   });
 });
