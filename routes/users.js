@@ -9,14 +9,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { sendPasswordReset } = require('../services/email');
 
-// Standard cookie options used for setting and clearing the auth cookie.
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/',
-});
+const { authenticate } = require('../middleware/auth');
 
 // Register new user
 router.post("/register", async (req, res) => {
@@ -77,12 +70,11 @@ router.post("/register", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // Set cookie
-    res.cookie("token", token, cookieOptions());
-
+    // Return token in JSON (client should store it, e.g. localStorage)
     res.status(201).json({
       success: true,
       message: "User registered successfully",
+      token,
       user: {
         id: user.id,
         name: user.name,
@@ -95,8 +87,7 @@ router.post("/register", async (req, res) => {
         district: user.district,
         sector: user.sector,
         cell: user.cell,
-        village: user.village,        
-
+        village: user.village,
       },
     });
   } catch (error) {
@@ -149,18 +140,17 @@ router.post("/login", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
-    // Set cookie
-    res.cookie("token", token, cookieOptions());
-
+    // Return token in JSON (client should store it, e.g. localStorage)
     res.json({
       success: true,
       message: "Login successful",
+      token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        last_login: user.last_login
+        last_login: user.last_login,
       },
     });
   } catch (error) {
@@ -172,11 +162,8 @@ router.post("/login", async (req, res) => {
 
 // Logout user
 router.post("/logout", (req, res) => {
-  res.clearCookie("token", cookieOptions());
-  res.json({
-    success: true,
-    message: "Logout successful",
-  });
+  // With token-in-JSON approach, logout is handled client-side by removing the token.
+  res.json({ success: true, message: "Logout successful" });
 });
 
 // Request password reset
@@ -239,25 +226,9 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // Get current user - FIXED VERSION
-router.get("/me", async (req, res) => {
-  try {
-    const token = req.cookies?.token;
-    if (!token) return res.status(401).json({ success: false, message: "Not authenticated" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.userId, { attributes: { exclude: ["password"] } });
-
-    if (!user || !user.is_active) {
-      res.clearCookie("token", cookieOptions());
-      return res.status(401).json({ success: false, message: "User not found or deactivated" });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error("Get user error:", error);
-    res.clearCookie("token", cookieOptions());
-    res.status(401).json({ success: false, message: "Invalid or expired token" });
-  }
+// Protected route — uses auth middleware which reads Bearer token from Authorization header
+router.get("/me", authenticate, async (req, res) => {
+  res.json({ success: true, user: req.user });
 });
 
 
