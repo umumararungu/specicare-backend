@@ -23,6 +23,7 @@ const authenticate = async (req, res, next) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
       });
       return res.status(401).json({ 
         success: false,
@@ -47,6 +48,7 @@ const authenticate = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
     });
     
     if (error.name === 'JsonWebTokenError') {
