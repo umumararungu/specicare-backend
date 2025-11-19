@@ -127,17 +127,26 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ success: false, message: "Email and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email and password are required" 
+      });
+    }
 
     const user = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (!user || !user.is_active) return res.status(401).json({ success: false, message: "Invalid email or password" });
+    if (!user || !user.is_active) {
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
+    }
 
     const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) return res.status(401).json({ success: false, message: "Invalid email or password" });
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
+    }
 
     await user.update({ last_login: new Date() });
 
-    // Issue access token
+    // Generate token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -147,10 +156,10 @@ router.post("/login", async (req, res) => {
     const decoded = jwt.decode(token) || {};
     const expiresAt = decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null;
 
-    // Return access token in JSON (client should store it and send in Authorization header)
-    res.json({
+    // SEND USER + TOKEN (Frontend needs this!)
+    return res.json({
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       token,
       expiresAt,
       user: {
@@ -158,15 +167,20 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        last_login: user.last_login,
-      },
+        phone: user.phone,
+        last_login: user.last_login
+      }
     });
+
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ success: false, message: "Error during login", error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Error during login", 
+      error: error.message 
+    });
   }
 });
-
 
 // Logout user
 // Logout: simple stateless logout (client removes stored token)

@@ -5,6 +5,8 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const http = require('http');
+const { Server: SocketIOServer } = require('socket.io');
 
 // Import middleware
 const {
@@ -59,6 +61,18 @@ app.use(
 
 // Respond to all OPTIONS (preflight)
 app.options("*", cors());
+
+// Dev request logger: prints each incoming request (only in non-production)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    try {
+      console.log(`${new Date().toISOString()} ${req.ip} ${req.method} ${req.originalUrl}`);
+    } catch (e) {
+      // ignore logging errors
+    }
+    next();
+  });
+}
 
 /* -------------------------------------------
    2. SECURITY + BODY PARSING
@@ -148,8 +162,114 @@ sequelize
   .then(() => {
     console.log("Database synced.");
 
-    app.listen(PORT, () => {
-      console.log(`SpeciCare server running on port ${PORT}`);
+    // Create HTTP server and attach Socket.IO
+    const server = http.createServer(app);
+
+    const io = new SocketIOServer(server, {
+      cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+    });
+
+    // Make io available via app.locals for controllers/services
+    app.locals.io = io;
+    try {
+      const socketService = require('./services/socket');
+      if (socketService && typeof socketService.setIo === 'function') socketService.setIo(io);
+    } catch (e) {
+      // non-fatal
+      console.warn('Could not set socketService io:', e && e.message);
+    }
+
+    io.on('connection', (socket) => {
+      console.log('Socket connected:', socket.id, 'ip=', socket.handshake.address);
+
+      socket.on('joinRoom', (room) => {
+        try {
+          // only allow join if socket has authenticated user
+          if (socket.data && socket.data.user) {
+            socket.join(room);
+          } else {
+            socket.emit('error', { message: 'Authentication required to join room' });
+          }
+        } catch (e) {}
+      });
+
+      socket.on('leaveRoom', (room) => {
+        try {
+          if (socket.data && socket.data.user) socket.leave(room);
+        } catch (e) {}
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', socket.id, reason);
+      });
+    });
+
+    // Log engine-level connection errors (handshake / upgrade failures)
+    try {
+      io.engine.on && io.engine.on('connection_error', (err) => {
+        try {
+          console.warn('Engine connection_error:', err && err.message, 'handshake:', err && err.req && err.req.headers && err.req.headers.origin);
+        } catch (e) {
+          console.warn('Engine connection_error (failed to print details)', e && e.message);
+        }
+      });
+    } catch (e) {
+      // ignore if engine not available
+    }
+    // Socket auth: require a JWT in the handshake auth (auth.token)
+    io.use(async (socket, next) => {
+      try {
+        const tokenRaw = socket.handshake.auth && (socket.handshake.auth.token || socket.handshake.auth.accessToken) 
+                          || socket.handshake.query && socket.handshake.query.token;
+
+        if (!tokenRaw) {
+          const err = new Error('Authentication required');
+          err.data = { message: 'Authentication required. Please login.' };
+          return next(err);
+        }
+
+        const token = typeof tokenRaw === 'string' && tokenRaw.startsWith('Bearer ') ? tokenRaw.split(' ')[1] : tokenRaw;
+
+        const jwt = require('jsonwebtoken');
+        const { User } = require('./models');
+
+        let decoded;
+        try {
+          decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+          const err = new Error('Invalid token');
+          err.data = { message: e.message };
+          return next(err);
+        }
+
+        const user = await User.findByPk(decoded.userId, { attributes: { exclude: ['password'] } });
+        if (!user) {
+          const err = new Error('User not found');
+          err.data = { message: 'User not found' };
+          return next(err);
+        }
+
+        if (!user.is_active) {
+          const err = new Error('Account is deactivated');
+          err.data = { message: 'Account is deactivated' };
+          return next(err);
+        }
+
+        // attach user to socket.data for later use
+        socket.data.user = user;
+        return next();
+      } catch (err) {
+        console.error('Socket auth error:', err && err.stack ? err.stack : err);
+        return next(new Error('Socket authentication failed'));
+      }
+    });
+
+    server.listen(PORT, () => {
+      console.log(`SpeciCare server (with Socket.IO) running on port ${PORT}`);
     });
   })
   .catch((err) => {

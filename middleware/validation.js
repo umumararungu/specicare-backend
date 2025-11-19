@@ -29,11 +29,26 @@ const authLimiter = rateLimit({
 });
 
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: {
-        success: false,
-        message: 'Too many requests, please try again later.'
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    // Return standard RateLimit headers and disable legacy headers
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res /*, next */) => {
+        const windowSec = Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000);
+        // Log details for debugging
+        try {
+            console.warn(`[RateLimit] Blocked request - ip=${req.ip} method=${req.method} url=${req.originalUrl} time=${new Date().toISOString()}`);
+        } catch (e) {
+            console.warn('[RateLimit] Blocked request (failed to log details)');
+        }
+
+        // Suggest retry-after header in seconds
+        res.set('Retry-After', String(windowSec));
+        return res.status(429).json({
+            success: false,
+            message: 'Too many requests, please try again later.'
+        });
     }
 });
 

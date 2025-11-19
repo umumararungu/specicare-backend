@@ -6,6 +6,15 @@ const authenticate = async (req, res, next) => {
   try {
     // Require Bearer token in Authorization header
     const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        console.log('Auth header present:', !!authHeader, 'path=', req.originalUrl);
+        if (authHeader && typeof authHeader === 'string') {
+          console.log('Auth header preview:', authHeader.slice(0, 30));
+        }
+      } catch (e) {}
+    }
+
     if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
       return res.status(401).json({ success: false, message: 'Authentication required. Please login.' });
     }
@@ -13,6 +22,9 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('Auth decoded token userId=', decoded && decoded.userId); } catch (e) {}
+    }
     const user = await User.findByPk(decoded.userId, {
       attributes: { exclude: ['password'] },
     });

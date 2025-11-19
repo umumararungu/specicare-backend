@@ -46,6 +46,19 @@ exports.createAppointment = async (req, res) => {
       console.error('Failed to record appointment activity:', e);
     }
 
+    // Emit socket event for realtime dashboards (if socket initialized)
+    try {
+      const socketService = require('../services/socket');
+      const io = socketService.getIo() || req.app.locals.io;
+      if (io) {
+        io.emit('appointments:created', newAppointment);
+        // Optionally emit to hospital room
+        if (newAppointment.hospital_id) io.to(String(newAppointment.hospital_id)).emit('appointments:created', newAppointment);
+      }
+    } catch (e) {
+      console.error('Socket emit failed for appointment create:', e);
+    }
+
     res.status(201).json(newAppointment);
   } catch (err) {
     console.error(err);

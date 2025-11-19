@@ -27,6 +27,7 @@
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
     "sequelizer": "^1.1.4",
+    "socket.io": "^4.8.1",
     "twilio": "^4.0.0"
   },
   "devDependencies": {

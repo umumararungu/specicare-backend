@@ -113,6 +113,16 @@ exports.createHospital = async (req, res) => {
       message: "Hospital created successfully",
       hospital: newHospital,
     });
+    // Emit socket event for realtime dashboards
+    try {
+      const socketService = require('../services/socket');
+      const io = socketService.getIo() || req.app.locals.io;
+      if (io) {
+        io.emit('hospitals:created', newHospital);
+      }
+    } catch (e) {
+      console.error('Socket emit failed for hospital create:', e);
+    }
   } catch (err) {
     console.error("Create hospital error:", err);
     res.status(500).json({
@@ -186,6 +196,15 @@ exports.updateHospital = async (req, res) => {
       message: "Hospital updated successfully",
       hospital,
     });
+
+    // Emit socket event for realtime dashboards
+    try {
+      const socketService = require('../services/socket');
+      const io = socketService.getIo() || req.app.locals.io;
+      if (io) io.emit('hospitals:updated', hospital);
+    } catch (e) {
+      console.error('Socket emit failed for hospital update:', e);
+    }
   } catch (err) {
     console.error("Update hospital error:", err);
     res.status(500).json({
@@ -211,6 +230,15 @@ exports.deleteHospital = async (req, res) => {
       success: true,
       message: "Hospital deleted successfully",
     });
+
+    // Emit socket event for realtime dashboards
+    try {
+      const socketService = require('../services/socket');
+      const io = socketService.getIo() || req.app.locals.io;
+      if (io) io.emit('hospitals:deleted', { id });
+    } catch (e) {
+      console.error('Socket emit failed for hospital delete:', e);
+    }
   } catch (err) {
     console.error("Delete hospital error:", err);
     res.status(500).json({

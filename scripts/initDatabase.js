@@ -199,7 +199,7 @@ async function insertSampleData(client) {
         console.log('Inserting sample data...');
 
 
-        // Insert sample hospitals
+        // Insert sample hospitals and capture their generated UUIDs
         const sampleHospitals = [
             ['Kigali Central Hospital', 'national_referral', '+250788111111', 'info@kch.rw', '+250788111112', 'Kigali', 'Nyarugenge', 'Nyamirambo'],
             ['King Faisal Hospital', 'private', '+250788222222', 'info@kfh.rw', '+250788222223', 'Kigali', 'Kicukiro', 'Gikondo'],
@@ -207,31 +207,32 @@ async function insertSampleData(client) {
             ['Muhanga District Hospital', 'district', '+250788444444', 'info@muhangahospital.rw', '+250788333333', 'Southern', 'Muhanga', 'Muhanga']
         ];
 
-        for (const hospital of sampleHospitals) {
-            await client.query(
-                `INSERT INTO hospitals 
+        const insertHospitalQ = `INSERT INTO hospitals 
                 (name, type, phone, email, emergency_phone, province, district, sector) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                hospital
-            );
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`;
+
+        const hospitalIds = [];
+        for (const hospital of sampleHospitals) {
+            const res = await client.query(insertHospitalQ, hospital);
+            hospitalIds.push(res.rows[0].id);
         }
 
-        // Insert sample medical tests
+        // Insert sample medical tests (use the returned hospital UUIDs and correct column ordering)
         const sampleTests = [
-            ['MRI Scan', 'Magnetic Resonance Imaging for detailed internal body scans', 'radiology', 1, 85000, '45 minutes', 'No food or drink 4 hours before scan', true, 8500],
-            ['CT Scan', 'Computed Tomography scan for cross-sectional body images', 'radiology', 2, 75000, '30 minutes', 'No metal objects, fasting may be required', true, 7500],
-            ['Blood Test (Full Panel)', 'Complete blood count and comprehensive metabolic panel', 3, 'laboratory', 15000, '15 minutes', 'Fasting for 8-12 hours required', true, 1500],
-            ['X-Ray Chest', 'Chest X-ray for lung and heart examination', 'radiology', 20000, 4, '20 minutes', 'No special preparation needed', true, 2000],
-            ['Ultrasound Abdomen', 'Abdominal ultrasound for organ examination', 'radiology', 2, 35000, '30 minutes', 'Fasting for 6-8 hours required', true, 3500]
+            // name, description, category, hospital_id, price, duration, preparation_instructions, is_insurance_covered, insurance_co_pay
+            ['MRI Scan', 'Magnetic Resonance Imaging for detailed internal body scans', 'radiology', hospitalIds[0], 85000, '45 minutes', 'No food or drink 4 hours before scan', true, 8500],
+            ['CT Scan', 'Computed Tomography scan for cross-sectional body images', 'radiology', hospitalIds[1], 75000, '30 minutes', 'No metal objects, fasting may be required', true, 7500],
+            ['Blood Test (Full Panel)', 'Complete blood count and comprehensive metabolic panel', 'laboratory', hospitalIds[2], 15000, '15 minutes', 'Fasting for 8-12 hours required', true, 1500],
+            ['X-Ray Chest', 'Chest X-ray for lung and heart examination', 'radiology', hospitalIds[3], 20000, '20 minutes', 'No special preparation needed', true, 2000],
+            ['Ultrasound Abdomen', 'Abdominal ultrasound for organ examination', 'radiology', hospitalIds[1], 35000, '30 minutes', 'Fasting for 6-8 hours required', true, 3500]
         ];
 
-        for (const test of sampleTests) {
-            await client.query(
-                `INSERT INTO medical_tests 
+        const insertTestQ = `INSERT INTO medical_tests 
                 (name, description, category, hospital_id, price, duration, preparation_instructions, is_insurance_covered, insurance_co_pay) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                test
-            );
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+
+        for (const test of sampleTests) {
+            await client.query(insertTestQ, test);
         }
 
 
