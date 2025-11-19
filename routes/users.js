@@ -160,7 +160,7 @@ router.post("/login", async (req, res) => {
     return res.json({
       success: true,
       message: "Login successful",
-      token,
+      token: "<jwt>",
       expiresAt,
       user: {
         id: user.id,
