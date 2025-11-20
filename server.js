@@ -1,7 +1,6 @@
 require("dotenv").config();
 
 const express = require("express");
-app.set('trust proxy', 1); 
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
@@ -21,6 +20,8 @@ const { sequelize } = require("./models");
 
 // Initialize app
 const app = express();
+// Trust proxy when behind a reverse proxy (load balancer) — set after app exists
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 /* -------------------------------------------
