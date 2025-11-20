@@ -163,117 +163,137 @@ sequelize
     console.log("Database synced.");
 
     // Create HTTP server and attach Socket.IO
-    const server = http.createServer(app);
+// Create HTTP server and attach Socket.IO
+const server = http.createServer(app);
 
-    const io = new SocketIOServer(server, {
-      cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"],
-        credentials: true,
-      },
-    });
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 
-    // Make io available via app.locals for controllers/services
-    app.locals.io = io;
-    try {
-      const socketService = require('./services/socket');
-      if (socketService && typeof socketService.setIo === 'function') socketService.setIo(io);
-    } catch (e) {
-      // non-fatal
-      console.warn('Could not set socketService io:', e && e.message);
+// Attach globally
+app.locals.io = io;
+try {
+  const socketService = require('./services/socket');
+  if (socketService?.setIo) socketService.setIo(io);
+} catch (e) {
+  console.warn('Could not set socketService io:', e?.message);
+}
+
+/* ----------------------------------------------
+   1. SOCKET AUTH MIDDLEWARE — MUST BE BEFORE .on()
+----------------------------------------------- */
+io.use(async (socket, next) => {
+  try {
+    const rawToken =
+      socket.handshake.auth?.token ||
+      socket.handshake.auth?.accessToken ||
+      socket.handshake.query?.token;
+
+    if (!rawToken) {
+      const err = new Error("Authentication required");
+      err.data = { message: "No token provided" };
+      return next(err);
     }
 
-    io.on('connection', (socket) => {
-      console.log('Socket connected:', socket.id, 'ip=', socket.handshake.address);
+    // clean "Bearer "
+    const token = rawToken.startsWith("Bearer ")
+      ? rawToken.substring(7)
+      : rawToken;
 
-      socket.on('joinRoom', (room) => {
-        try {
-          // only allow join if socket has authenticated user
-          if (socket.data && socket.data.user) {
-            socket.join(room);
-          } else {
-            socket.emit('error', { message: 'Authentication required to join room' });
-          }
-        } catch (e) {}
-      });
+    const jwt = require("jsonwebtoken");
+    const { User } = require("./models");
 
-      socket.on('leaveRoom', (room) => {
-        try {
-          if (socket.data && socket.data.user) socket.leave(room);
-        } catch (e) {}
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', socket.id, reason);
-      });
-    });
-
-    // Log engine-level connection errors (handshake / upgrade failures)
+    let decoded;
     try {
-      io.engine.on && io.engine.on('connection_error', (err) => {
-        try {
-          console.warn('Engine connection_error:', err && err.message, 'handshake:', err && err.req && err.req.headers && err.req.headers.origin);
-        } catch (e) {
-          console.warn('Engine connection_error (failed to print details)', e && e.message);
-        }
-      });
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (e) {
-      // ignore if engine not available
+      const err = new Error("Invalid token");
+      err.data = { message: e.message };
+      return next(err);
     }
-    // Socket auth: require a JWT in the handshake auth (auth.token)
-    io.use(async (socket, next) => {
-      try {
-        const tokenRaw = socket.handshake.auth && (socket.handshake.auth.token || socket.handshake.auth.accessToken) 
-                          || socket.handshake.query && socket.handshake.query.token;
 
-        if (!tokenRaw) {
-          const err = new Error('Authentication required');
-          err.data = { message: 'Authentication required. Please login.' };
-          return next(err);
-        }
-
-        const token = typeof tokenRaw === 'string' && tokenRaw.startsWith('Bearer ') ? tokenRaw.split(' ')[1] : tokenRaw;
-
-        const jwt = require('jsonwebtoken');
-        const { User } = require('./models');
-
-        let decoded;
-        try {
-          decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (e) {
-          const err = new Error('Invalid token');
-          err.data = { message: e.message };
-          return next(err);
-        }
-
-        const user = await User.findByPk(decoded.userId, { attributes: { exclude: ['password'] } });
-        if (!user) {
-          const err = new Error('User not found');
-          err.data = { message: 'User not found' };
-          return next(err);
-        }
-
-        if (!user.is_active) {
-          const err = new Error('Account is deactivated');
-          err.data = { message: 'Account is deactivated' };
-          return next(err);
-        }
-
-        // attach user to socket.data for later use
-        socket.data.user = user;
-        return next();
-      } catch (err) {
-        console.error('Socket auth error:', err && err.stack ? err.stack : err);
-        return next(new Error('Socket authentication failed'));
-      }
+    // DB lookup as you had
+    const user = await User.findByPk(decoded.userId, {
+      attributes: { exclude: ["password"] },
     });
 
-    server.listen(PORT, () => {
-      console.log(`SpeciCare server (with Socket.IO) running on port ${PORT}`);
-    });
+    if (!user) {
+      return next(new Error("User not found"));
+    }
+    if (!user.is_active) {
+      return next(new Error("Account is deactivated"));
+    }
+
+    // attach authenticated user
+    socket.data.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    return next();
+  } catch (err) {
+    console.error("Socket auth error:", err);
+    return next(new Error("Socket authentication failed"));
+  }
+});
+
+/* ----------------------------------------------
+   2. SOCKET CONNECTION HANDLER
+----------------------------------------------- */
+io.on("connection", (socket) => {
+  console.log(
+    "🔌 Socket connected:",
+    socket.id,
+    "user:",
+    socket.data?.user?.id,
+    "role:",
+    socket.data?.user?.role
+  );
+
+  socket.on("joinRoom", (room) => {
+    if (!socket.data.user) return;
+    socket.join(room);
+  });
+
+  socket.on("leaveRoom", (room) => {
+    if (!socket.data.user) return;
+    socket.leave(room);
+  });
+
+  // Admin-only updates
+  socket.on("admin:update", () => {
+    if (socket.data.user?.role === "admin") {
+      io.emit("appointment:update");
+    }
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log("Socket disconnected:", socket.id, reason);
+  });
+});
+
+/* ----------------------------------------------
+   3. SOCKET ENGINE ERROR LOGS
+----------------------------------------------- */
+if (io.engine?.on) {
+  io.engine.on("connection_error", (err) => {
+    console.warn("Engine connection_error:", err?.message);
+  });
+}
+
+server.listen(PORT, () => {
+  console.log(`SpeciCare server (with Socket.IO) running on port ${PORT}`);
+});
+
   })
   .catch((err) => {
-    console.error("❌ Failed to start server:", err);
+    console.error("Failed to start server:", err);
     process.exit(1);
   });
 
