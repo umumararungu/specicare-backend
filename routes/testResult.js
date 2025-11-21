@@ -37,7 +37,7 @@ const requireAdmin = (req, res, next) => {
 router.get('/my', authenticate, async (req, res) => {
   try {
     const testResults = await TestResult.findAll({
-      where: { patientId: req.user.id },
+      where: { patient_id: req.user.id },
       include: [
         {
           model: Appointment,
@@ -71,7 +71,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const testResult = await TestResult.findOne({
       where: { 
         id: req.params.id,
-        patientId: req.user.id 
+        patient_id: req.user.id 
       },
       include: [
         {
@@ -148,10 +148,10 @@ router.post('/', authenticate, requireAdmin, upload.array('files'), async (req, 
 
     // Create the TestResult
     const newResult = await TestResult.create({
-      appointmentId,
-      testId,
-      patientId,
-      hospitalId,
+      appointment_id: appointmentId,
+      test_id: testId,
+      patient_id: patientId,
+      hospital_id: hospitalId,
       result_type,
       files: filesMeta,
       numeric_results,
