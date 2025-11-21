@@ -25,14 +25,15 @@ id: {
     allowNull: false,
   },
   files: {
-    type: DataTypes.JSONB, // [{ filename, url, uploadedBy, ... }]
+    type: DataTypes.JSONB, 
     defaultValue: [],
   },
-  numeric_value: {
-    type: DataTypes.STRING, // [{ parameter, value, unit, interpretation }]
+  numeric_results: {  
+    type: DataTypes.JSONB,  
+    defaultValue: [],  
   },
   text_results: {
-    type: DataTypes.JSONB, // { findings, impression, conclusion, ... }
+    type: DataTypes.JSONB, 
     defaultValue: {},
   },
   status: {
@@ -63,7 +64,7 @@ id: {
   },
 });
 
-// 🔍 Virtual getters
+// Virtual getters
 Object.defineProperty(TestResult.prototype, 'isVerified', {
   get() {
     return this.status === 'verified' && !!this.verified_by;
