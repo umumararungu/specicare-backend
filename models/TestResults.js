@@ -42,7 +42,7 @@ id: {
   },
 
   priority: {
-    type: DataTypes.ENUM('routine', 'urgent', 'stat'),
+    type: DataTypes.ENUM('routine', 'urgent', 'stat', 'normal'),
     defaultValue: 'routine',
   },
   created_at: {
