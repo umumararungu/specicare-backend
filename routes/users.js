@@ -24,8 +24,6 @@ router.post("/register", async (req, res) => {
       gender,
       district,
       sector,
-      cell,
-      village,
       role = "patient",
     } = req.body;
 
@@ -57,8 +55,6 @@ router.post("/register", async (req, res) => {
       gender,
       district,
       sector,
-      cell,
-      village,
       role,
       is_active: true,
     });
@@ -89,8 +85,6 @@ router.post("/register", async (req, res) => {
         gender: user.gender,
         district: user.district,
         sector: user.sector,
-        cell: user.cell,
-        village: user.village,
       },
     });
   } catch (error) {

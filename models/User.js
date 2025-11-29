@@ -52,8 +52,6 @@ module.exports = (sequelize, DataTypes) => {
 
       district: DataTypes.STRING,
       sector: DataTypes.STRING,
-      cell: DataTypes.STRING,
-      village: DataTypes.STRING,
 
       role: {
         type: DataTypes.ENUM('patient', 'admin', 'hospital_staff'),
