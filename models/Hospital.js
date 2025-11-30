@@ -39,28 +39,10 @@ id: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    cell: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    village: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     street: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    latitude: {
-      type: DataTypes.DECIMAL,
-      allowNull: true,
-    },
-    longitude: {
-      type: DataTypes.DECIMAL,
-      allowNull: true,
-    },
-
-
   facilities: {
     type: DataTypes.JSONB, // e.g. ["X-ray", "CT Scan", "Emergency"]
     defaultValue: [],
