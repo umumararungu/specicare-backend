@@ -70,4 +70,4 @@ id: {
   underscored: true,
 });
 }
-// module.exports = Hospital;
+

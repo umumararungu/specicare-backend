@@ -110,7 +110,7 @@ router.get("/appointments", authenticate, requireAdmin, async (req, res) => {
         {
           model: Hospital,
           as: "hospital",
-          attributes: ["id", "name", "province","district","sector","cell","village","street","latitude","longitude"],
+          attributes: ["id", "name", "province","district","sector","street"],
         },
         {
           model: MedicalTest,

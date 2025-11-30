@@ -80,7 +80,7 @@ router.get('/:id', authenticate, async (req, res) => {
             {
               model: Hospital,
               as: 'hospital',
-              attributes: ['id', 'name', "province","district","sector","cell","village","street","latitude","longitude"]
+              attributes: ['id', 'name', "province","district","sector","street"]
             }
           ]
         },
